@@ -1,0 +1,7 @@
+language: generic
+services:
+  - docker
+install:
+  - docker build -t dieta/shiny-auth0 . > /dev/null
+script:
+  - docker run -d dieta/shiny-auth0 npm start
