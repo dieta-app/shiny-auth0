@@ -1,8 +1,7 @@
-var express = require("express");
-var passport = require("passport");
-var httpProxy = require("http-proxy");
-var ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
+const httpProxy = require("http-proxy");
+const ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
 
 var proxy = httpProxy.createProxyServer({
   target: {
@@ -23,17 +22,17 @@ var setIfExists = function(proxyReq, header, value) {
 };
 
 proxy.on("proxyReq", function(proxyReq, req, res, options) {
-  setIfExists(res, "x-auth0-nickname", req.user._json.nickname);
-  setIfExists(res, "x-auth0-user_id", req.session.passport.user.user_id);
-  setIfExists(res, "x-auth0-jwt", req.session.passport.user.jwt);
-  setIfExists(res, "x-auth0-email", req.user._json.email);
-  setIfExists(res, "x-auth0-name", req.user._json.name);
-  setIfExists(res, "x-auth0-picture", req.user._json.picture);
-  setIfExists(res, "x-auth0-locale", req.user._json.locale);
+  setIfExists(proxyReq, "x-auth0-nickname", req.user._json.nickname);
+  setIfExists(proxyReq, "x-auth0-user_id", req.session.passport.user.user_id);
+  setIfExists(proxyReq, "x-auth0-jwt", req.session.passport.user.jwt);
+  setIfExists(proxyReq, "x-auth0-email", req.user._json.email);
+  setIfExists(proxyReq, "x-auth0-name", req.user._json.name);
+  setIfExists(proxyReq, "x-auth0-picture", req.user._json.picture);
+  setIfExists(proxyReq, "x-auth0-locale", req.user._json.locale);
 });
 
 /* Proxy all requests */
-router.all(/.*/, ensureLoggedIn, function(req, res, next) {
+router.all(/.*/, ensureLoggedIn, async function(req, res, next) {
   proxy.web(req, res);
 });
 

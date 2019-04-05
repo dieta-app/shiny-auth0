@@ -1,23 +1,38 @@
-var express = require("express");
-var passport = require("passport");
-var httpProxy = require("http-proxy");
-var ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
-var router = express.Router();
+const express = require("express");
+const passport = require("passport");
+const httpProxy = require("http-proxy");
+const ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
+const router = express.Router();
+const { promisify } = require("util");
+const redis = require("redis");
 
-var env = process.env;
+const redisClient = redis.createClient({
+  host: process.env.REDIS_HOST || "127.0.0.1",
+  port: 6379
+});
+
+const getAsync = promisify(redisClient.get).bind(redisClient);
+const setAsync = promisify(redisClient.set).bind(redisClient);
+const delAsync = promisify(redisClient.del).bind(redisClient);
+
+redisClient.on("error", function(err) {
+  console.log("Error " + err);
+});
+
+const env = process.env;
 
 // This adds support for the current way to sso
-var authenticateWithDefaultPrompt = passport.authenticate("auth0", {
+const authenticateWithDefaultPrompt = passport.authenticate("auth0", {
   scope: "openid profile"
 });
-var authenticateWithPromptNone = passport.authenticate("auth0", {
+const authenticateWithPromptNone = passport.authenticate("auth0", {
   scope: "openid profile",
   prompt: "none"
 });
 
 /* GET home page. */
 router.get("/", function(req, res, next) {
-  res.redirect(`/secure/?sess=${req.sessionID}`);
+  res.redirect(`/secure/?sid=${req.sessionID}`);
 });
 
 router.get(
@@ -28,14 +43,21 @@ router.get(
     }
     return authenticateWithDefaultPrompt(req, res, next);
   },
-  function(req, res) {
-    res.redirect(`/secure/?sess=${req.sessionID}`);
+  async function(req, res) {
+    const exists = await getAsync(req.sessionID);
+    if (!exists) {
+      await setAsync(req.sessionID, JSON.stringify(req.session), "EX", 36000);
+    }
+    res.redirect(`/secure/?sid=${req.sessionID}`);
   }
 );
 
-router.get("/logout", function(req, res) {
-  var logoutUrl = env.LOGOUT_URL;
-
+router.get("/logout", async function(req, res) {
+  let logoutUrl = env.LOGOUT_URL;
+  const exists = await getAsync(req.sessionID);
+  if (exists && req.sessionID) {
+    await delAsync(req.sessionID);
+  }
   if (env.LOGOUT_AUTH0 === "true") {
     logoutUrl =
       "https://" +
@@ -56,17 +78,25 @@ router.get("/callback", function(req, res, next) {
     if (err) {
       next(err);
     }
-
     if (info === "login_required") {
       return res.redirect("/login?sso=false");
     }
 
     if (user) {
-      return req.login(user, function(err) {
+      return req.login(user, async function(err) {
         if (err) {
           next(err);
         }
-        res.redirect(req.session.returnTo || `/secure/?sess=${req.sessionID}`);
+        const exists = await getAsync(req.sessionID);
+        if (!exists) {
+          await setAsync(
+            req.sessionID,
+            JSON.stringify(req.session),
+            "EX",
+            36000
+          );
+        }
+        res.redirect(req.session.returnTo || `/secure/?sid=${req.sessionID}`);
       });
     }
 

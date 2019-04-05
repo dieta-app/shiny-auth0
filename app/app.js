@@ -9,16 +9,6 @@ const dotenv = require("dotenv");
 const passport = require("passport");
 const Auth0Strategy = require("passport-auth0");
 
-const redis = require("redis");
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || "127.0.0.1"
-});
-const redisStore = require("connect-redis")(session);
-
-redisClient.on("error", function(err) {
-  console.log("Error " + err);
-});
-
 dotenv.load();
 
 const routes = require("./routes/index");
@@ -47,7 +37,6 @@ const strategy = new Auth0Strategy(
     // accessToken is the token to call Auth0 API (not needed in the most cases)
     // extraParams.id_token has the JSON Web Token
     // profile has all the information from the user
-    // profile.jwt = extraParams.id_token;
     return done(null, profile);
   }
 );
@@ -75,13 +64,18 @@ app.use(
   session({
     secret: process.env.COOKIE_SECRET,
     resave: true,
-    saveUninitialized: true,
-    store: new redisStore({
-      host: process.env.REDIS_HOST || "127.0.0.1",
-      port: 6379,
-      client: redisClient,
-      ttl: 36000
-    })
+    saveUninitialized: true
+
+    // redisStore: this was sting the keys in redis but connections were not showing this data
+    // when manually connecting to redis client from node or from R, a different database 0 is shown.
+    // forced to manually call redis instead
+
+    // store: new redisStore({
+    //   host: process.env.REDIS_HOST || "127.0.0.1",
+    //   port: 6379,
+    //   client: redisClient,
+    //   ttl: 36000
+    // })
   })
 );
 app.use(passport.initialize());

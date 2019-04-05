@@ -1,22 +1,22 @@
-var express = require("express");
-var passport = require("passport");
-var httpProxy = require("http-proxy");
-var ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
-var router = express.Router();
-var fs = require("fs");
-var async = require("async");
+const express = require("express");
+const passport = require("passport");
+const httpProxy = require("http-proxy");
+const ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
+const router = express.Router();
+const fs = require("fs");
+const async = require("async");
 
-var debug = false;
+const debug = false;
 
 /* Proxy all requests */
 router.all(/.*/, ensureLoggedIn, function(req, res, next) {
   debug && console.log("# LOGS | router.all()");
 
   // log folder
-  var log_folder = "../logs/";
+  const log_folder = "../logs/";
 
   // log json
-  var log_json = {
+  const log_json = {
     title: "Shiny Server Log File",
     log_time: new Date(),
     apps: {}
