@@ -63,9 +63,13 @@ app.use(cookieParser());
 app.use(
   session({
     secret: process.env.COOKIE_SECRET,
-    resave: true,
-    saveUninitialized: true
-
+    saveUninitialized: false,
+    rolling: true,
+    resave: false,
+    unset: "destroy",
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000 // 1 hour
+    }
     // redisStore: this was sting the keys in redis but connections were not showing this data
     // when manually connecting to redis client from node or from R, a different database 0 is shown.
     // forced to manually call redis instead

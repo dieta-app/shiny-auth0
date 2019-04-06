@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const httpProxy = require("http-proxy");
 const ensureLoggedIn = require("connect-ensure-login").ensureLoggedIn();
+const url = require("url");
 
 var proxy = httpProxy.createProxyServer({
   target: {
@@ -31,8 +32,24 @@ proxy.on("proxyReq", function(proxyReq, req, res, options) {
   setIfExists(proxyReq, "x-auth0-locale", req.user._json.locale);
 });
 
+// router.all(/.*/, ensureLoggedIn, function(req, res, next) {
+//   let forceSID = url.format({
+//     protocol: req.protocol,
+//     host: req.get("host"),
+//     pathname: req.originalUrl
+//   });
+
+//   if (res.query && res.query.sid) {
+//     if (res.query.sid !== req.sessionID) {
+//       forceSID = forceSID.split("?")[0] + `?sid=${req.sessionID}`;
+//     }
+//   } else {
+//     forceSID = forceSID.split("?")[0] + `?sid=${req.sessionID}`;
+//   }
+// });
+
 /* Proxy all requests */
-router.all(/.*/, ensureLoggedIn, async function(req, res, next) {
+router.all(/.*/, ensureLoggedIn, function(req, res, next) {
   proxy.web(req, res);
 });
 
