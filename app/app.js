@@ -63,8 +63,7 @@ app.use(cookieParser());
 app.use(
   session({
     secret: process.env.COOKIE_SECRET,
-    saveUninitialized: false,
-    rolling: true,
+    saveUninitialized: true,
     resave: false,
     unset: "destroy",
     cookie: {
