@@ -46,7 +46,7 @@ router.get(
   async function(req, res) {
     const exists = await getAsync(req.sessionID);
     if (!exists) {
-      await setAsync(req.sessionID, JSON.stringify(req.session), "EX", 36000);
+      await setAsync(req.sessionID, JSON.stringify(req.session), "EX", 86400);
     }
     res.redirect(`/secure/?sid=${req.sessionID}`);
   }
@@ -94,7 +94,7 @@ router.get("/callback", function(req, res, next) {
             req.sessionID,
             JSON.stringify(req.session),
             "EX",
-            36000
+            86400
           );
         }
         res.redirect(req.session.returnTo || `/secure/?sid=${req.sessionID}`);
