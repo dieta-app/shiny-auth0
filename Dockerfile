@@ -5,6 +5,7 @@ LABEL maintainer="bneigher@bigdieta.com"
 # add workdir
 WORKDIR /usr/src/app
 
+
 # copy app
 COPY app/ ./
 

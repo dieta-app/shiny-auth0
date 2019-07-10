@@ -37,6 +37,17 @@ const strategy = new Auth0Strategy(
     // accessToken is the token to call Auth0 API (not needed in the most cases)
     // extraParams.id_token has the JSON Web Token
     // profile has all the information from the user
+    if (
+      process.env.ROLE_SCOPE_REQUIREMENT &&
+      process.env.ROLE_SCOPE_REQUIREMENT.split(",").length
+    ) {
+      if (profile && profile._json) {
+        if (profile._json[process.env.ROLE_SCOPE]) {
+          profile[process.env.ROLE_SCOPE] =
+            profile._json[process.env.ROLE_SCOPE];
+        }
+      }
+    }
     return done(null, profile);
   }
 );

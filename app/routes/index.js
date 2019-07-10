@@ -21,12 +21,49 @@ redisClient.on("error", function(err) {
 
 const env = process.env;
 
+const checkAllowedRoles = (userRoles, appRoles) => {
+  return (appRoles || []).some(role => {
+    return userRoles.includes(role);
+  });
+};
+
+const checkInsufficientRoles = user => {
+  if (
+    process.env.ROLE_SCOPE_REQUIREMENT &&
+    process.env.ROLE_SCOPE_REQUIREMENT.split(",").length
+  ) {
+    const roles = process.env.ROLE_SCOPE_REQUIREMENT.split(",");
+    if (
+      !user[process.env.ROLE_SCOPE] ||
+      !checkAllowedRoles(user[process.env.ROLE_SCOPE], roles)
+    ) {
+      if (env.LOGOUT_AUTH0 === "true") {
+        logoutUrl =
+          "https://" +
+          env.AUTH0_DOMAIN +
+          "/v2/logout?returnTo=" +
+          env.LOGOUT_URL +
+          "&client_id=" +
+          env.AUTH0_CLIENT_ID +
+          (env.LOGOUT_FEDERATED === "true" ? "&federated" : "") +
+          "&error=" +
+          "Permission Denied" +
+          "&error_description=" +
+          "Insufficient Permissions to access resource";
+        return logoutUrl;
+      }
+      return true;
+    }
+    return false;
+  }
+};
+
 // This adds support for the current way to sso
 const authenticateWithDefaultPrompt = passport.authenticate("auth0", {
-  scope: "openid profile"
+  scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`
 });
 const authenticateWithPromptNone = passport.authenticate("auth0", {
-  scope: "openid profile",
+  scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`,
   prompt: "none"
 });
 
@@ -37,7 +74,7 @@ router.get("/", function(req, res, next) {
 
 router.get(
   "/login",
-  function(req, res, next) {
+  async function(req, res, next) {
     if (env.CHECK_SESSION === "true" && req.query.sso !== "false") {
       return authenticateWithPromptNone(req, res, next);
     }
@@ -71,38 +108,57 @@ router.get("/logout", async function(req, res) {
 
   req.session.destroy();
   req.logOut();
-  res.redirect(logoutUrl);
+  return res.redirect(logoutUrl);
 });
 
 router.get("/callback", function(req, res, next) {
-  passport.authenticate("auth0", function(err, user, info) {
-    if (err) {
-      next(err);
-    }
-    if (info === "login_required") {
-      return res.redirect("/login?sso=false");
-    }
+  passport.authenticate(
+    "auth0",
+    {
+      scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`
+    },
+    async function(err, user, info) {
+      if (err) {
+        next(err);
+      }
+      if (info === "login_required") {
+        return res.redirect("/login?sso=false");
+      }
 
-    if (user) {
-      return req.login(user, async function(err) {
-        if (err) {
-          next(err);
+      if (user) {
+        const badPermissions = checkInsufficientRoles(user);
+        if (badPermissions) {
+          req.session.destroy();
+          req.logOut();
+          if (typeof badPermissions === "string") {
+            return res.redirect(badPermissions);
+          } else {
+            return res.redirect("/login?sso=false");
+          }
+        } else {
+          return req.login(user, async function(err) {
+            if (err) {
+              next(err);
+            }
+            const exists = await getAsync(req.sessionID);
+            if (!exists) {
+              await setAsync(
+                req.sessionID,
+                JSON.stringify(req.session),
+                "EX",
+                86400
+              );
+            }
+            res.redirect(
+              req.session.returnTo || `/secure/?sid=${req.sessionID}`
+            );
+          });
         }
-        const exists = await getAsync(req.sessionID);
-        if (!exists) {
-          await setAsync(
-            req.sessionID,
-            JSON.stringify(req.session),
-            "EX",
-            86400
-          );
-        }
-        res.redirect(req.session.returnTo || `/secure/?sid=${req.sessionID}`);
-      });
-    }
+      }
 
-    next(new Error(info));
-  })(req, res, next);
+      next(new Error(info));
+    }
+  )(req, res, next);
 });
 
 module.exports = router;
