@@ -30,9 +30,13 @@ const checkAllowedRoles = (userRoles, appRoles) => {
 const checkInsufficientRoles = user => {
   if (
     env.ROLE_SCOPE_REQUIREMENT &&
-    env.ROLE_SCOPE_REQUIREMENT.split(",").length
+    env.ROLE_SCOPE_REQUIREMENT.trim()
+      .replace(/['"]+/g, "")
+      .split(",").length
   ) {
-    const roles = env.ROLE_SCOPE_REQUIREMENT.split(",");
+    const roles = env.ROLE_SCOPE_REQUIREMENT.trim()
+      .replace(/['"]+/g, "")
+      .split(",");
     if (
       !user[env.ROLE_SCOPE] ||
       !checkAllowedRoles(user[env.ROLE_SCOPE], roles)

@@ -39,7 +39,9 @@ const strategy = new Auth0Strategy(
     // profile has all the information from the user
     if (
       process.env.ROLE_SCOPE_REQUIREMENT &&
-      process.env.ROLE_SCOPE_REQUIREMENT.split(",").length
+      process.env.ROLE_SCOPE_REQUIREMENT.trim()
+        .replace(/['"]+/g, "")
+        .split(",")
     ) {
       if (profile && profile._json) {
         if (profile._json[process.env.ROLE_SCOPE]) {
