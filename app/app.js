@@ -41,7 +41,7 @@ const strategy = new Auth0Strategy(
       process.env.ROLE_SCOPE_REQUIREMENT &&
       process.env.ROLE_SCOPE_REQUIREMENT.trim()
         .replace(/['"]+/g, "")
-        .split(",")
+        .split(",").length
     ) {
       if (profile && profile._json) {
         if (profile._json[process.env.ROLE_SCOPE]) {
