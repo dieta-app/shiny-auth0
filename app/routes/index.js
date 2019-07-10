@@ -29,13 +29,13 @@ const checkAllowedRoles = (userRoles, appRoles) => {
 
 const checkInsufficientRoles = user => {
   if (
-    process.env.ROLE_SCOPE_REQUIREMENT &&
-    process.env.ROLE_SCOPE_REQUIREMENT.split(",").length
+    env.ROLE_SCOPE_REQUIREMENT &&
+    env.ROLE_SCOPE_REQUIREMENT.split(",").length
   ) {
-    const roles = process.env.ROLE_SCOPE_REQUIREMENT.split(",");
+    const roles = env.ROLE_SCOPE_REQUIREMENT.split(",");
     if (
-      !user[process.env.ROLE_SCOPE] ||
-      !checkAllowedRoles(user[process.env.ROLE_SCOPE], roles)
+      !user[env.ROLE_SCOPE] ||
+      !checkAllowedRoles(user[env.ROLE_SCOPE], roles)
     ) {
       if (env.LOGOUT_AUTH0 === "true") {
         logoutUrl =
@@ -60,10 +60,10 @@ const checkInsufficientRoles = user => {
 
 // This adds support for the current way to sso
 const authenticateWithDefaultPrompt = passport.authenticate("auth0", {
-  scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`
+  scope: `openid idToken permissions profile ${env.ROLE_SCOPE}`
 });
 const authenticateWithPromptNone = passport.authenticate("auth0", {
-  scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`,
+  scope: `openid idToken permissions profile ${env.ROLE_SCOPE}`,
   prompt: "none"
 });
 
@@ -115,7 +115,7 @@ router.get("/callback", function(req, res, next) {
   passport.authenticate(
     "auth0",
     {
-      scope: `openid idToken permissions profile ${process.env.ROLE_SCOPE}`
+      scope: `openid idToken permissions profile ${env.ROLE_SCOPE}`
     },
     async function(err, user, info) {
       if (err) {
